@@ -1,125 +1,131 @@
-<!doctype html>
-<html class="no-js" lang="">
-<head>
-  <meta charset="utf-8">
-  <meta name="description" content="">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Andrew Serna's Wild Rydes Site</title>
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
+// SPDX-License-Identifier: MIT-0
 
-  <link rel="stylesheet" href="css/font.css">
-  <link rel="stylesheet" href="css/main.css">
+const randomBytes = require('crypto').randomBytes;
 
-  <script src="js/vendor/modernizr.js"></script>
-</head>
-<body class="page-unicorns">
+const AWS = require('aws-sdk');
 
-  <header class="site-header">
-    <div class="site-logo dark">Wild Rydes</div>
+const ddb = new AWS.DynamoDB.DocumentClient();
 
-    <div class="row column medium-8 large-6 xlarge-5 xxlarge-4">
-      <h1 class="title">Unicorns Are Our Friends</h1>
-      <p class="content">
-        The app is what makes this service exist, but the unicorns make it move. Meet them and see who you are riding with!
-      </p>
-    </div>
+const fleet = [
+	{
+		Name: 'Andrew',
+		Color: 'Golden',
+		Gender: 'Male',
+	},
+	{
+		Name: 'Andrew',
+		Color: 'Mean Green',
+		Gender: 'Male',
+	},
+	{
+		Name: 'Andrew',
+		Color: 'Royal Blue',
+		Gender: 'Male',
+	},
+	{
+		Name: 'Andrew',
+		Color: 'White',
+		Gender: 'Male',
+	},
+	{
+		Name: 'Andrew',
+		Color: 'Yellow',
+		Gender: 'Female',
+	},
+];
 
-    <nav class="site-nav">
-      <ul>
-        <li><a href="index.html">Home</a></li>
-        <li><a href="unicorns.html">Meet the Unicorns</a></li>
-        <li><a href="investors.html">Investors & Board of Directors</a></li>
-        <li><a href="faq.html">FAQ</a></li>
-        <li><a href="apply.html">Apply</a></li>
-      </ul>
-    </nav>
-    <button type="button" class="btn-menu"><span>Menu</span></button>
-  </header>
+exports.handler = (event, context, callback) => {
+	if (!event.requestContext.authorizer) {
+		errorResponse('Authorization not configured', context.awsRequestId, callback);
+		return;
+	}
 
-  <div class="row column medium-10 large-8 xxlarge-6">
-    <p class="content">
-      Wild Rydes has a dedicated staff that recruits, trains, and tends to our herd of unicorns. We take great pride in the quality of unicorns and rydes that we provide to our customers, and our staff exercises the utmost care in vetting the unicorns that join our herd.
-    </p>
+	const rideId = toUrlString(randomBytes(16));		//	see line 4
+	console.log('Received event (', rideId, '): ', event);
 
-    <p class="content">
-      Every unicorn goes through a rigorous due diligence process where we perform background checks, flying exams, and several rounds of interviews. Unicorns accepted to Wild Rydes are then treated to the best care and maintenance possible. We provide them excellent benefits, health care, and employee perks. This is part of our company philosophy in which happy unicorns lead to happy customers.
-    </p>
+	// Because we're using a Cognito User Pools authorizer, all of the claims
+	// included in the authentication token are provided in the request context.
+	// This includes the username as well as other attributes.
+	const username = event.requestContext.authorizer.claims['cognito:username'];
 
-    <p class="content">Meet a few of the unicorns that are part of our family.</p>
-  </div>
+	// The body field of the event in a proxy integration is a raw string.
+	// In order to extract meaningful values, we need to first parse this string
+	// into an object. A more robust implementation might inspect the Content-Type
+	// header first and use a different parsing strategy based on that value.
+	const requestBody = JSON.parse(event.body);
 
-  <section class="unicorns-list">
-    <div class="row">
-      <div class="unicorn jimmy">
-        <div class="columns medium-5 large-6 xlarge-5 xlarge-offset-1">
-          <img src="images/wr-unicorn-one.png" alt="Jimmy Three Legs">
-        </div>
+	const pickupLocation = requestBody.PickupLocation;
 
-        <div class="columns medium-7 large-6 xlarge-5 xxlarge-4">
-          <h2 class="title">Bucephalus</h2>
-          <div class="subtitle">Golden Swiss</div>
-          <p class="content">
-            Bucephalus joined Wild Rydes in February 2016 and has been giving rydes almost daily. He says he most enjoys getting to know each of his ryders, which makes the job more interesting for him. In his spare time, Bucephalus enjoys watching sunsets and playing Pokemon Go.
-          </p>
-        </div>
-      </div>
-    </div>
+	const unicorn = findUnicorn(pickupLocation);
 
-    <div class="row">
-      <div class="unicorn henry">
-        <div class="columns medium-5 medium-push-7 large-6 large-push-6 xlarge-5 xlarge-offset-1 xlarge-push-5">
-          <img src="images/wr-unicorn-two.png" alt="Hot Shoe Henry">
-        </div>
+	recordRide(rideId, username, unicorn).then(() => {
+		// You can use the callback function to provide a return value from your Node.js
+		// Lambda functions. The first parameter is used for failed invocations. The
+		// second parameter specifies the result data of the invocation.
 
-        <div class="columns medium-7 medium-pull-5 large-6 large-pull-6 xlarge-5 xlarge-pull-5 xxlarge-4 xxlarge-offset-1">
-          <h2 class="title">Shadowfox</h2>
-          <div class="subtitle">Brown Jersey</div>
-          <p class="content">
-            Shadowfox joined Wild Rydes after completing a distinguished career in the military, where he toured the world in many critical missions. Shadowfox enjoys impressing his ryders with magic tricks that he learned from his previous owner.
-          </p>
-        </div>
-      </div>
-    </div>
+		// Because this Lambda function is called by an API Gateway proxy integration
+		// the result object must use the following structure.
+		callback(null, {
+			statusCode: 201,
+			body: JSON.stringify({
+				RideId: rideId,
+				Unicorn: unicorn,
+				UnicornName: unicorn.Name,
+				Eta: '30 seconds',
+				Rider: username,
+			}),
+			headers: {'Access-Control-Allow-Origin': '*',},
+		});
+	}).catch((err) => {
+		console.error(err);
 
-    <div class="row">
-      <div class="unicorn veronica">
-        <div class="columns medium-5 large-6 xlarge-5 xlarge-offset-1">
-          <img src="images/wr-unicorn-three.png" alt="Veronica">
-        </div>
+		// If there is an error during processing, catch it and return
+		// from the Lambda function successfully. Specify a 500 HTTP status
+		// code and provide an error message in the body. This will provide a
+		// more meaningful error response to the end client.
+		errorResponse(err.message, context.awsRequestId, callback)
+	});
+};
 
-        <div class="columns medium-7 large-6 xlarge-5 xxlarge-4">
-          <h2 class="title">Rocinante</h2>
-          <div class="subtitle">Baby Flying Yellowback</div>
-          <p class="content">
-            Rocinante recently joined the Wild Rydes team in Madrid, Spain. She was instrumental in forming Wild Rydes’ Spanish operations after a long, distinguished acting career in windmill shadow-jousting.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
+// This is where you would implement logic to find the optimal unicorn for
+// this ride (possibly invoking another Lambda function as a microservice.)
+// For simplicity, we'll just pick a unicorn at random.
+function findUnicorn(pickupLocation) {
+	console.log('Finding unicorn for ', pickupLocation.Latitude, ', ', pickupLocation.Longitude);
+	return fleet[Math.floor(Math.random() * fleet.length)];
+}
 
-  <footer class="site-footer">
-    <div class="row column">
-      <nav class="footer-nav">
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="unicorns.html">Meet the Unicorns</a></li>
-          <li><a href="investors.html">Investors & Board of Directors</a></li>
-          <li><a href="faq.html">FAQ</a></li>
-          <li><a href="apply.html">Apply</a></li>
-        </ul>
-      </nav>
-    </div>
+function recordRide(rideId, username, unicorn) {
+	return ddb.put({
+		TableName: 'Rides',
+		Item: {
+			RideId: rideId,
+			User: username,
+			Unicorn: unicorn,
+			UnicornName: unicorn.Name,
+			RequestTime: new Date().toISOString(),
+		},
+	}).promise();
+}
 
-    <div class="row column">
-      <div class="footer-legal">
-        &copy;WildRydes Inc<br>
-        All Rights Reserved
-      </div>
-    </div>
-  </footer>
+function toUrlString(buffer) {
+	return buffer.toString('base64')
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=/g, '');
+}
 
-  <script src="js/vendor.js"></script>
-
-  <script src="js/main.js"></script>
-</body>
-</html>
+function errorResponse(errorMessage, awsRequestId, callback) {
+	callback(null, {
+		statusCode: 500,
+		body: JSON.stringify({
+			Error: errorMessage,
+			Reference: awsRequestId,
+		}),
+		headers: {
+			'Access-Control-Allow-Origin': '*',
+		},
+	});
+}
