@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Choose a Ride!</title>
+	<style>
+	
+		.animal-image {
+			width: 30em;
+			height: 25em;
+			display: block;
+			margin: 1em;
+			object-fit: cover;
+			object-position: center;
+			border-radius: 50%;
+			border: 3px solid black;
+			cursor: pointer;
+			transition: transform 0.3s ease-in-out;
+		}
+
+		.section {
+			display: block;
+			text-align: center;
+			margin-bottom: 30px;
+		}
+
+		.animal-link {
+			text-decoration: none;
+			color: black;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-end;
+			height: 100%;
+		}
+		.animal-link:hover .animal-image {
+			transform: scale(1.1);
+		}
+		
+		body {
+			background-image: url('https://cbsaustin.com/resources/media/a7c4e8a5-c6f0-4aed-b7a5-70b1f27db5a0-originalBlur_zoo.PNG?1555127198419');
+			background-size: cover;
+			background-position: center;
+			background-repeat: no-repeat;
+			background-color: black;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			height: 100vh;
+			margin: 0;
+		}
+		.animal-name {
+			color: white;
+			text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+			font-size: 2em;
+			margin-bottom: 20px;
+		}
+		
+		h1{
+			color: white;
+			text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+			font-size: 2em;
+			margin-bottom: 20px;
+		}
+	</style>
+</head>
+<body>
+	<h1>Choose your ride:</h1>
+	<table style="width: 100%;">
+		<tr>
+			<td>
+				<section>
+					<a href="https://en.wikipedia.org/wiki/Tiger" class="animal-link">
+						<img src="https://cdn.pixabay.com/photo/2014/04/05/12/27/tiger-317024_960_720.jpg" class="animal-image">
+						<span class="animal-name">Tiger</span>
+					</a>
+				</section>
+			</td>
+			<td>
+				<section>
+					<a href="https://en.wikipedia.org/wiki/Lion" class="animal-link">
+						<img src="https://cdn.pixabay.com/photo/2020/04/18/16/06/the-lion-5059783_960_720.jpg" class="animal-image">
+						<span class="animal-name">Lion</span>
+					</a>
+				</section>
+			</td>
+			<td>
+				<section>
+					<a href="https://en.wikipedia.org/wiki/Unicorn" class="animal-link">
+						<img src="https://cdn.pixabay.com/photo/2017/10/21/17/46/unicorn-2875349_960_720.jpg" class="animal-image" height=40em>
+						<span class="animal-name">Unicorn</span>
+					</a>
+				</section>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
